@@ -36,6 +36,26 @@ router.put('/:id', requireRole('admin', 'hr'), async (req, res) => {
   res.json(await Employee.findByPk(req.params.id));
 });
 
+// Bulk update shift times for an entire campaign or selected agents
+router.post('/bulk-shift', requireRole('admin', 'hr'), async (req, res) => {
+  const { campaign, employeeIds, shiftStart, shiftEnd } = req.body;
+  const where = {};
+  const { Op } = require('sequelize');
+
+  if (Array.isArray(employeeIds) && employeeIds.length > 0) {
+    where.id = { [Op.in]: employeeIds };
+  } else if (campaign && campaign !== 'All') {
+    where.campaign = campaign;
+  }
+
+  const [affectedCount] = await Employee.update(
+    { shiftStart, shiftEnd },
+    { where }
+  );
+
+  res.json({ success: true, updatedCount: affectedCount });
+});
+
 router.delete('/:id', requireRole('admin'), async (req, res) => {
   await Employee.destroy({ where: { id: req.params.id } });
   res.status(204).end();

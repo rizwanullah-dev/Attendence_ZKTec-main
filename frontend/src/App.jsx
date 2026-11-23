@@ -6,6 +6,9 @@ import Employees from './pages/Employees.jsx';
 import Attendance from './pages/Attendance.jsx';
 import Reports from './pages/Reports.jsx';
 import Devices from './pages/Devices.jsx';
+import BreakMonitor from './pages/BreakMonitor.jsx';
+import Leaderboard from './pages/Leaderboard.jsx';
+import Shifts from './pages/Shifts.jsx';
 import { isDemoMode } from './api/client';
 
 export const isLoggedIn = () => Boolean(localStorage.getItem('token'));
@@ -140,6 +143,9 @@ function Layout({ children }) {
   const links = [
     ['/', '⌂', 'Floor Dashboard'],
     ['/attendance', '✓', 'Live Punches & AUX'],
+    ['/breaks', '☕', 'Break Time Monitor'],
+    ['/leaderboard', '🏆', 'Adherence Leaderboard'],
+    ['/shifts', '⏱', 'Shift Schedules'],
     ['/employees', '◉', 'Agent Roster'],
     ['/reports', '▥', 'Campaign Reports'],
     ['/devices', '⌁', 'Biometric Devices'],
@@ -262,6 +268,36 @@ export default function App() {
             <Protected>
               <Layout>
                 <Attendance />
+              </Layout>
+            </Protected>
+          }
+        />
+        <Route
+          path="/breaks"
+          element={
+            <Protected>
+              <Layout>
+                <BreakMonitor />
+              </Layout>
+            </Protected>
+          }
+        />
+        <Route
+          path="/leaderboard"
+          element={
+            <Protected>
+              <Layout>
+                <Leaderboard />
+              </Layout>
+            </Protected>
+          }
+        />
+        <Route
+          path="/shifts"
+          element={
+            <Protected>
+              <Layout>
+                <Shifts />
               </Layout>
             </Protected>
           }

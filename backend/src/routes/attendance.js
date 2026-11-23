@@ -245,6 +245,234 @@ router.post('/', requireRole('admin', 'hr'), async (req, res) => {
   res.status(201).json(log);
 });
 
+// Bulk punch for multiple agents or entire campaign (e.g. clock-in / clock-out all at once)
+router.post('/bulk', requireRole('admin', 'hr'), async (req, res) => {
+  const { employeeIds, campaign, punchType = 'check_in', timestamp, notes } = req.body;
+  let targetEmployees = [];
+
+  if (Array.isArray(employeeIds) && employeeIds.length > 0) {
+    targetEmployees = await Employee.findAll({ where: { id: { [Op.in]: employeeIds }, status: 'active' } });
+  } else if (campaign && campaign !== 'All') {
+    targetEmployees = await Employee.findAll({ where: { campaign, status: 'active' } });
+  } else {
+    targetEmployees = await Employee.findAll({ where: { status: 'active' } });
+  }
+
+  const punchTime = timestamp ? new Date(timestamp) : new Date();
+  const created = [];
+
+  for (const emp of targetEmployees) {
+    const log = await AttendanceLog.create({
+      employeeId: emp.id,
+      deviceUserId: String(emp.deviceUserId || emp.id),
+      timestamp: punchTime,
+      punchType,
+      campaign: emp.campaign || campaign || 'Medicare',
+      verifyMode: 'manual_bulk',
+      notes: notes || `Bulk ${punchType.replace(/_/g, ' ')}`,
+      source: 'manual_import',
+    });
+    created.push(log);
+  }
+
+  res.status(201).json({ count: created.length, records: created });
+});
+
+// Break Time & AUX Monitor endpoint
+router.get('/break-monitor', async (req, res) => {
+  const { campaign } = req.query;
+  const whereEmp = { status: 'active' };
+  if (campaign && campaign !== 'All') whereEmp.campaign = campaign;
+
+  const employees = await Employee.findAll({
+    where: whereEmp,
+    order: [['campaign', 'ASC'], ['name', 'ASC']],
+  });
+
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const todayEnd = new Date();
+  todayEnd.setHours(23, 59, 59, 999);
+
+  const monitors = [];
+
+  for (const emp of employees) {
+    const logs = await AttendanceLog.findAll({
+      where: {
+        employeeId: emp.id,
+        timestamp: { [Op.between]: [todayStart, todayEnd] },
+      },
+      order: [['timestamp', 'ASC']],
+    });
+
+    let totalTeaMinutes = 0;
+    let totalLunchMinutes = 0;
+    let currentAuxState = 'available'; // 'available', 'on_tea_break', 'on_lunch', 'in_coaching', 'logged_out'
+    let currentAuxSince = null;
+
+    let teaStartTime = null;
+    let lunchStartTime = null;
+
+    for (const log of logs) {
+      const type = log.punchType;
+      const t = new Date(log.timestamp).getTime();
+
+      if (type === 'break_start') {
+        teaStartTime = t;
+        currentAuxState = 'on_tea_break';
+        currentAuxSince = log.timestamp;
+      } else if (type === 'break_end') {
+        if (teaStartTime) {
+          totalTeaMinutes += Math.round((t - teaStartTime) / 60000);
+          teaStartTime = null;
+        }
+        currentAuxState = 'available';
+        currentAuxSince = null;
+      } else if (type === 'lunch_start') {
+        lunchStartTime = t;
+        currentAuxState = 'on_lunch';
+        currentAuxSince = log.timestamp;
+      } else if (type === 'lunch_end') {
+        if (lunchStartTime) {
+          totalLunchMinutes += Math.round((t - lunchStartTime) / 60000);
+          lunchStartTime = null;
+        }
+        currentAuxState = 'available';
+        currentAuxSince = null;
+      } else if (['coaching', 'meeting'].includes(type)) {
+        currentAuxState = type === 'coaching' ? 'in_coaching' : 'in_meeting';
+        currentAuxSince = log.timestamp;
+      } else if (type === 'check_out') {
+        currentAuxState = 'logged_out';
+        currentAuxSince = log.timestamp;
+      } else if (type === 'check_in') {
+        currentAuxState = 'available';
+      }
+    }
+
+    // If currently on ongoing break
+    const now = Date.now();
+    let currentBreakElapsedMin = 0;
+    if (teaStartTime) {
+      currentBreakElapsedMin = Math.round((now - teaStartTime) / 60000);
+    } else if (lunchStartTime) {
+      currentBreakElapsedMin = Math.round((now - lunchStartTime) / 60000);
+    }
+
+    // Thresholds: Tea break allowance is 15 min; lunch is 45 min
+    const teaOverrun = Math.max(0, (totalTeaMinutes + (teaStartTime ? currentBreakElapsedMin : 0)) - 15);
+    const lunchOverrun = Math.max(0, (totalLunchMinutes + (lunchStartTime ? currentBreakElapsedMin : 0)) - 45);
+
+    monitors.push({
+      employeeId: emp.id,
+      name: emp.name,
+      empCode: emp.empCode,
+      campaign: emp.campaign,
+      campaignRole: emp.campaignRole,
+      station: emp.station,
+      currentAuxState,
+      currentAuxSince,
+      currentBreakElapsedMin,
+      totalTeaMinutes: totalTeaMinutes + (teaStartTime ? currentBreakElapsedMin : 0),
+      totalLunchMinutes: totalLunchMinutes + (lunchStartTime ? currentBreakElapsedMin : 0),
+      teaOverrun,
+      lunchOverrun,
+      isOverdue: (currentAuxState === 'on_tea_break' && currentBreakElapsedMin > 15) ||
+                 (currentAuxState === 'on_lunch' && currentBreakElapsedMin > 45),
+    });
+  }
+
+  res.json({ records: monitors });
+});
+
+// Campaign & Agent Performance Leaderboard
+router.get('/leaderboard', async (req, res) => {
+  const { campaign, days = 30 } = req.query;
+  const whereEmp = { status: 'active' };
+  if (campaign && campaign !== 'All') whereEmp.campaign = campaign;
+
+  const employees = await Employee.findAll({
+    where: whereEmp,
+    order: [['campaign', 'ASC'], ['name', 'ASC']],
+  });
+
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - Number(days));
+  startDate.setHours(0, 0, 0, 0);
+
+  const leaderboard = [];
+
+  for (const emp of employees) {
+    const logs = await AttendanceLog.findAll({
+      where: {
+        employeeId: emp.id,
+        timestamp: { [Op.gte]: startDate },
+      },
+      order: [['timestamp', 'ASC']],
+    });
+
+    // Group logs by day
+    const dayGroups = {};
+    for (const log of logs) {
+      const dateKey = new Date(log.timestamp).toISOString().slice(0, 10);
+      if (!dayGroups[dateKey]) dayGroups[dateKey] = [];
+      dayGroups[dateKey].push(log);
+    }
+
+    let daysPresent = Object.keys(dayGroups).length;
+    let onTimeDays = 0;
+    let earlyDays = 0;
+    let lateDays = 0;
+    let totalMinutesLate = 0;
+    let totalFloorHours = 0;
+
+    for (const [dateKey, dayLogs] of Object.entries(dayGroups)) {
+      const checkIn = dayLogs.find((l) => ['check_in', 'shift_in'].includes(l.punchType)) || dayLogs[0];
+      const checkOut = [...dayLogs].reverse().find((l) => ['check_out', 'shift_out'].includes(l.punchType));
+
+      const adherence = calculateShiftAdherence({
+        shiftStartStr: emp.shiftStart || '19:00:00',
+        shiftEndStr: emp.shiftEnd || '04:00:00',
+        checkInTime: checkIn ? checkIn.timestamp : null,
+        checkOutTime: checkOut ? checkOut.timestamp : null,
+      });
+
+      if (adherence.checkIn.status === 'early') earlyDays++;
+      else if (adherence.checkIn.status === 'on_time') onTimeDays++;
+      else if (adherence.checkIn.status === 'late') {
+        lateDays++;
+        totalMinutesLate += adherence.checkIn.diffMinutes || 0;
+      }
+
+      totalFloorHours += adherence.durationHours || 0;
+    }
+
+    const punctualityScore = daysPresent > 0
+      ? Math.round(((earlyDays + onTimeDays) / daysPresent) * 100)
+      : 0;
+
+    leaderboard.push({
+      employeeId: emp.id,
+      name: emp.name,
+      empCode: emp.empCode,
+      campaign: emp.campaign,
+      campaignRole: emp.campaignRole,
+      daysPresent,
+      earlyDays,
+      onTimeDays,
+      lateDays,
+      totalMinutesLate,
+      totalFloorHours: Number(totalFloorHours.toFixed(1)),
+      punctualityScore,
+    });
+  }
+
+  // Sort by highest punctuality score, then floor hours
+  leaderboard.sort((a, b) => b.punctualityScore - a.punctualityScore || b.totalFloorHours - a.totalFloorHours);
+
+  res.json({ leaderboard });
+});
+
 // Multi-file manual import (CSV/Excel/.dat)
 router.post('/import', requireRole('admin', 'hr'), upload.array('files', 20), async (req, res) => {
   if (!req.files?.length) return res.status(400).json({ error: 'No files uploaded' });

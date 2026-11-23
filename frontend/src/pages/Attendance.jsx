@@ -21,6 +21,7 @@ export default function Attendance() {
   const [summary, setSummary] = useState(null);
   const [error, setError] = useState('');
   const [showManualPunch, setShowManualPunch] = useState(false);
+  const [showBulkPunch, setShowBulkPunch] = useState(false);
 
   // Manual call center punch state
   const [punchForm, setPunchForm] = useState({
@@ -30,6 +31,15 @@ export default function Attendance() {
     timestamp: new Date().toISOString().slice(0, 19),
     notes: '',
   });
+
+  // Bulk punch state
+  const [bulkPunchForm, setBulkPunchForm] = useState({
+    campaign: 'Medicare',
+    punchType: 'check_in',
+    timestamp: new Date().toISOString().slice(0, 19),
+    notes: 'Floor Shift Bulk Punch',
+  });
+  const [bulkSuccess, setBulkSuccess] = useState('');
 
   function load() {
     api
@@ -90,6 +100,25 @@ export default function Attendance() {
     }
   }
 
+  async function handleBulkPunch(e) {
+    e.preventDefault();
+    setError('');
+    setBulkSuccess('');
+    try {
+      const res = await api.post('/attendance/bulk', {
+        campaign: bulkPunchForm.campaign,
+        punchType: bulkPunchForm.punchType,
+        timestamp: bulkPunchForm.timestamp ? new Date(bulkPunchForm.timestamp).toISOString() : new Date().toISOString(),
+        notes: bulkPunchForm.notes,
+      });
+      setBulkSuccess(`✓ Successfully recorded bulk punch for ${res.data.count} active agents in ${bulkPunchForm.campaign}!`);
+      setShowBulkPunch(false);
+      load();
+    } catch (e) {
+      setError(getErrorMessage(e));
+    }
+  }
+
   const recordList = safeArray(records);
   const deviceList = safeArray(devices);
   const employeeList = safeArray(employees);
@@ -107,7 +136,10 @@ export default function Attendance() {
         description="Monitor punch timestamps down to the second, manage call center AUX states, and import biometric logs."
         actions={
           <div style={{ display: 'flex', gap: '8px' }}>
-            <button onClick={() => setShowManualPunch(!showManualPunch)}>
+            <button onClick={() => { setShowBulkPunch(!showBulkPunch); setShowManualPunch(false); }}>
+              {showBulkPunch ? '✕ Close Bulk' : '⚡ Bulk Punch Campaign'}
+            </button>
+            <button onClick={() => { setShowManualPunch(!showManualPunch); setShowBulkPunch(false); }}>
               {showManualPunch ? '✕ Close Form' : '＋ Record Agent Punch'}
             </button>
             <label className="button-label">
@@ -125,6 +157,61 @@ export default function Attendance() {
       />
 
       {error && <div className="feedback error">{error}</div>}
+      {bulkSuccess && <div className="feedback success" style={{ marginBottom: '16px' }}>{bulkSuccess}</div>}
+
+      {/* Bulk Campaign Punch Box */}
+      {showBulkPunch && (
+        <section className="card" style={{ marginBottom: '20px', borderLeft: '4px solid #2563eb' }}>
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Batch Floor Punch</p>
+              <h2>Clock In / Out All Campaign Agents at Once</h2>
+            </div>
+          </div>
+          <form className="device-form" onSubmit={handleBulkPunch}>
+            <select
+              value={bulkPunchForm.campaign}
+              onChange={(e) => setBulkPunchForm({ ...bulkPunchForm, campaign: e.target.value })}
+              required
+            >
+              <option value="Medicare">🩺 All Medicare Agents</option>
+              <option value="ACA">🛡️ All ACA Agents</option>
+              <option value="Final Expense">📜 All Final Expense Agents</option>
+              <option value="All">🏢 Entire Floor (All Campaigns)</option>
+            </select>
+
+            <select
+              value={bulkPunchForm.punchType}
+              onChange={(e) => setBulkPunchForm({ ...bulkPunchForm, punchType: e.target.value })}
+              required
+            >
+              <option value="check_in">🟢 Bulk Clock In (Shift Login)</option>
+              <option value="check_out">🔴 Bulk Clock Out (Shift Logout)</option>
+              <option value="break_start">☕ Bulk Tea Break Start</option>
+              <option value="break_end">☕ Bulk Tea Break End (Floor Return)</option>
+              <option value="lunch_start">🍔 Bulk Lunch Start</option>
+              <option value="lunch_end">🍔 Bulk Lunch End</option>
+              <option value="meeting">👥 Bulk Floor Huddle / Meeting</option>
+            </select>
+
+            <input
+              type="datetime-local"
+              step="1"
+              value={bulkPunchForm.timestamp}
+              onChange={(e) => setBulkPunchForm({ ...bulkPunchForm, timestamp: e.target.value })}
+              required
+            />
+
+            <input
+              placeholder="Bulk notes (e.g. Shift Started On Time)"
+              value={bulkPunchForm.notes}
+              onChange={(e) => setBulkPunchForm({ ...bulkPunchForm, notes: e.target.value })}
+            />
+
+            <button type="submit" style={{ backgroundColor: '#2563eb' }}>Apply Bulk Punch</button>
+          </form>
+        </section>
+      )}
 
       {/* Campaign Filter Tabs */}
       <div className="campaign-pills">
