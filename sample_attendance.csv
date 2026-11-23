@@ -1,0 +1,10 @@
+deviceUserId,timestamp,verifyMode
+101,2026-11-23 18:58:12,fingerprint
+102,2026-11-23 19:02:45,fingerprint
+103,2026-11-23 18:50:30,fingerprint
+201,2026-11-23 18:55:18,face
+202,2026-11-23 19:14:02,face
+203,2026-11-23 18:59:59,card
+301,2026-11-23 19:01:22,fingerprint
+302,2026-11-23 19:05:40,fingerprint
+303,2026-11-23 18:45:00,fingerprint

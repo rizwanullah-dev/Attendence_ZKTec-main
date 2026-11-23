@@ -1,0 +1,10 @@
+empCode,deviceUserId,name,campaign,campaignRole,station,department,designation,email,phone
+MED-101,101,Sarah Chen,Medicare,Closer,Desk 01,Sales Floor,Senior Closer,sarah.chen@medicare.callcenter.com,+1-555-0101
+MED-102,102,David Miller,Medicare,Qualifier / Opener,Desk 02,Sales Floor,Lead Opener,david.m@medicare.callcenter.com,+1-555-0102
+MED-103,103,Marcus Brody,Medicare,Team Lead,Desk TL-1,Floor Leadership,Team Lead,marcus.b@medicare.callcenter.com,+1-555-0103
+ACA-201,201,Alex Rivera,ACA,Closer,Desk 11,Sales Floor,Senior Closer,alex.r@aca.callcenter.com,+1-555-0201
+ACA-202,202,Jessica Taylor,ACA,Qualifier / Opener,Desk 12,Sales Floor,Opener,jessica.t@aca.callcenter.com,+1-555-0202
+ACA-203,203,Brian Patel,ACA,QA Specialist,QA Room,Quality Assurance,QA Analyst,brian.p@aca.callcenter.com,+1-555-0203
+FE-301,301,Robert Wilson,Final Expense,Closer,Desk 21,Sales Floor,Closer,robert.w@fe.callcenter.com,+1-555-0301
+FE-302,302,Emily Davis,Final Expense,Qualifier / Opener,Desk 22,Sales Floor,Opener,emily.d@fe.callcenter.com,+1-555-0302
+FE-303,303,Carlos Mendez,Final Expense,Supervisor,Floor Desk 0,Floor Leadership,Floor Supervisor,carlos.m@fe.callcenter.com,+1-555-0303
