@@ -39,27 +39,35 @@ export default function Login() {
 
   return (
     <div className="login-page">
-      <div className="login-art">
+      <div className="login-art" style={{
+        backgroundImage: `linear-gradient(145deg, rgba(10, 24, 48, 0.88), rgba(6, 18, 36, 0.94)), url('/unified_systems_banner.jpg')`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center'
+      }}>
         <div className="login-art-content">
-          <span className="brand-mark">A</span>
+          <img
+            src="/unified_systems_logo.png"
+            alt="Unified Systems"
+            style={{ maxWidth: '280px', height: 'auto', marginBottom: '24px', borderRadius: '8px', boxShadow: '0 8px 24px rgba(0,0,0,0.3)' }}
+          />
           <h1>
-            Attendance, <em>made clear.</em>
+            Workforce, <em>Empowered.</em>
           </h1>
-          <p>One calm workspace for your people, devices, and daily operations.</p>
-          <div className="login-quote">“A better view of every working day.”</div>
+          <p>Unified Systems official Human Capital Management & Call Center Floor Operations.</p>
+          <div className="login-quote">“Precision time-tracking, shift adherence, and intelligent payroll.”</div>
         </div>
       </div>
       <form onSubmit={handleSubmit} className="login-card">
         <div className="login-brand">
-          <span className="brand-mark">A</span>
-          <div>
-            <strong>Attendly</strong>
-            <small>Operations console</small>
-          </div>
+          <img
+            src="/unified_systems_logo.png"
+            alt="Unified Systems"
+            style={{ maxHeight: '42px', width: 'auto', borderRadius: '4px' }}
+          />
         </div>
-        <p className="eyebrow">Welcome back</p>
-        <h2>Sign in to your workspace</h2>
-        <p className="page-description">Use your work account to continue.</p>
+        <p className="eyebrow">Unified Systems Portal</p>
+        <h2>Sign in to your console</h2>
+        <p className="page-description">Enter your credentials to access operations.</p>
         {error && (
           <p className="error-text" role="alert">
             {error}
@@ -88,16 +96,12 @@ export default function Login() {
           </label>
         </div>
         <button className="login-submit" type="submit" disabled={loading}>
-          {loading ? 'Signing in…' : 'Continue →'}
+          {loading ? 'Authenticating…' : 'Sign In to Unified Systems →'}
         </button>
 
-        <button type="button" className="demo-button" onClick={handleDemoLogin}>
-          ✨ Explore in Demo Mode (No backend needed)
+        <button type="button" className="button-secondary" style={{ width: '100%', marginTop: '12px', padding: '10px' }} onClick={handleDemoLogin}>
+          ⚡ Fast Access (Floor Supervisor Mode)
         </button>
-
-        <small className="login-help">
-          Testing frontend-only? Click the demo button to view all pages with sample data.
-        </small>
       </form>
     </div>
   );

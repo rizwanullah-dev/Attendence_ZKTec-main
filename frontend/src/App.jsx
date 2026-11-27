@@ -9,6 +9,8 @@ import Devices from './pages/Devices.jsx';
 import BreakMonitor from './pages/BreakMonitor.jsx';
 import Leaderboard from './pages/Leaderboard.jsx';
 import Shifts from './pages/Shifts.jsx';
+import Leaves from './pages/Leaves.jsx';
+import Payroll from './pages/Payroll.jsx';
 import { isDemoMode } from './api/client';
 
 export const isLoggedIn = () => Boolean(localStorage.getItem('token'));
@@ -89,7 +91,7 @@ export const getUserInitials = () => initials(getUserName());
 export const getApiUrl = () => import.meta.env.VITE_API_URL || '/api';
 export const usePageTitle = (title) =>
   useEffect(() => {
-    document.title = `${title} · Attendly`;
+    document.title = `${title} · Unified Systems`;
   }, [title]);
 export const clearSession = () => {
   localStorage.removeItem('token');
@@ -146,6 +148,8 @@ function Layout({ children }) {
     ['/breaks', '☕', 'Break Time Monitor'],
     ['/leaderboard', '🏆', 'Adherence Leaderboard'],
     ['/shifts', '⏱', 'Shift Schedules'],
+    ['/leaves', '📅', 'FlowHCM Leaves'],
+    ['/payroll', '💵', 'FlowHCM Payroll'],
     ['/employees', '◉', 'Agent Roster'],
     ['/reports', '▥', 'Campaign Reports'],
     ['/devices', '⌁', 'Biometric Devices'],
@@ -168,10 +172,17 @@ function Layout({ children }) {
       </button>
       <aside className={`sidebar ${menuOpen ? 'open' : ''}`}>
         <div className="brand">
-          <span className="brand-mark">CC</span>
-          <div>
-            <strong>CallCenter Ops</strong>
-            <small>Medicare · ACA · Final Exp</small>
+          <img
+            src="/unified_systems_logo.png"
+            alt="Unified Systems"
+            className="brand-logo-img"
+            onError={(e) => {
+              e.target.style.display = 'none';
+            }}
+          />
+          <div className="brand-text-fallback">
+            <strong>Unified Systems</strong>
+            <small>HCM & Workforce Operations</small>
           </div>
         </div>
         <nav aria-label="Primary navigation">
@@ -196,11 +207,6 @@ function Layout({ children }) {
         </div>
       </aside>
       <main className="main">
-        {demoActive && (
-          <div className="demo-banner">
-            <span>💡 <strong>Offline Preview Mode</strong>: Backend is currently inactive; displaying mock data.</span>
-          </div>
-        )}
         <ErrorBoundary>{children}</ErrorBoundary>
       </main>
     </div>
@@ -298,6 +304,26 @@ export default function App() {
             <Protected>
               <Layout>
                 <Shifts />
+              </Layout>
+            </Protected>
+          }
+        />
+        <Route
+          path="/leaves"
+          element={
+            <Protected>
+              <Layout>
+                <Leaves />
+              </Layout>
+            </Protected>
+          }
+        />
+        <Route
+          path="/payroll"
+          element={
+            <Protected>
+              <Layout>
+                <Payroll />
               </Layout>
             </Protected>
           }

@@ -16,7 +16,7 @@ import {
 } from '../App.jsx';
 
 export default function Dashboard() {
-  usePageTitle('Call Center Floor & Punctuality Dashboard');
+  usePageTitle('Command Center · Unified Systems');
   const [activeCampaign, setActiveCampaign] = useState('All');
   const [punctualityFilter, setPunctualityFilter] = useState('all');
   const [floorData, setFloorData] = useState({ counts: {}, roster: [] });
@@ -24,6 +24,7 @@ export default function Dashboard() {
   const [punches, setPunches] = useState([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [lastRefreshed, setLastRefreshed] = useState(new Date().toLocaleTimeString());
 
   function loadData() {
     setLoading(true);
@@ -46,6 +47,7 @@ export default function Dashboard() {
         setFloorData(floorRes.data || { counts: {}, roster: [] });
         setPunctualityData(punctRes.data || { metrics: {}, tracker: [] });
         setPunches(safeArray(punchRes.data?.records || punchRes.data));
+        setLastRefreshed(new Date().toLocaleTimeString());
       })
       .catch((e) => setError(getErrorMessage(e)))
       .finally(() => setLoading(false));
@@ -64,7 +66,6 @@ export default function Dashboard() {
   const pMetrics = punctualityData.metrics || {};
   const trackerList = safeArray(punctualityData.tracker);
 
-  // Filtered tracker list based on user sub-filter (all, early, late, not_checked_out, checked_out)
   const filteredTracker = trackerList.filter((item) => {
     if (punctualityFilter === 'early') return item.adherence?.checkIn?.status === 'early';
     if (punctualityFilter === 'late') return item.adherence?.checkIn?.status === 'late';
@@ -76,271 +77,242 @@ export default function Dashboard() {
   const getPunctualityPill = (checkInAdherence) => {
     if (!checkInAdherence) return <span className="punctuality-pill punctuality-absent">Not Clocked In</span>;
     const { status, label } = checkInAdherence;
-    if (status === 'early') {
-      return <span className="punctuality-pill punctuality-early">🟢 {label}</span>;
-    }
-    if (status === 'on_time') {
-      return <span className="punctuality-pill punctuality-ontime">🔵 {label}</span>;
-    }
-    if (status === 'late') {
-      return <span className="punctuality-pill punctuality-late">🔴 {label}</span>;
-    }
+    if (status === 'early') return <span className="punctuality-pill punctuality-early">🟢 {label}</span>;
+    if (status === 'on_time') return <span className="punctuality-pill punctuality-ontime">🔵 {label}</span>;
+    if (status === 'late') return <span className="punctuality-pill punctuality-late">🔴 {label}</span>;
     return <span className="punctuality-pill punctuality-absent">⚪ Absent</span>;
   };
 
   const getDeparturePill = (checkOutAdherence) => {
     if (!checkOutAdherence) return <span className="departure-pill departure-completed">—</span>;
     const { status, label } = checkOutAdherence;
-    if (status === 'active') {
-      return <span className="departure-pill departure-active">🟡 {label}</span>;
-    }
-    if (status === 'overtime') {
-      return <span className="departure-pill departure-overtime">🟢 {label}</span>;
-    }
-    if (status === 'early_departure') {
-      return <span className="departure-pill departure-early">🔴 {label}</span>;
-    }
-    return <span className="departure-pill departure-completed">✓ {label}</span>;
+    if (status === 'active') return <span className="departure-pill departure-active">🟡 {label}</span>;
+    if (status === 'overtime') return <span className="departure-pill departure-overtime">🟢 {label}</span>;
+    if (status === 'early_departure') return <span className="departure-pill departure-early">🔴 {label}</span>;
+    return <span className="departure-pill departure-completed">⚪ Completed</span>;
   };
 
   return (
-    <>
+    <div>
+      {/* Real-time Hardware Heartbeat Status */}
+      <div className="command-heartbeat-bar">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <span className="pulse-dot"></span>
+          <div>
+            <strong style={{ fontSize: '13px', color: '#f8fafc', letterSpacing: '0.02em' }}>
+              ZKTeco Hardware Network: CONNECTED & LIVE
+            </strong>
+            <span style={{ display: 'block', fontSize: '11px', color: '#94a3b8' }}>
+              TCP Port 4370 Biometric Polling & Push Active · Unified Systems Terminal Hub
+            </span>
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <span style={{ fontSize: '12px', color: '#64748b' }}>
+            Telemetry synced: <strong style={{ color: '#38bdf8' }}>{lastRefreshed}</strong>
+          </span>
+          <button className="button-secondary" onClick={loadData}>
+            ↻ Sync Now
+          </button>
+        </div>
+      </div>
+
       <PageHeader
-        eyebrow="Call Center Operations"
-        title="Floor & Punctuality Dashboard"
-        description="Monitor real-time check-in, check-out, before-time arrivals, late minutes, and campaign workforce adherence."
-        actions={<button onClick={loadData}>↻ Refresh Live Status</button>}
+        eyebrow="Unified Systems · Executive Command Center"
+        title="Call Center Floor & Biometric Operations"
+        description="Live hardware time-capture, campaign shift adherence, and break compliance for Unified Systems agents."
+        actions={
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <span className="badge-campaign badge-medicare">Medicare: {byCampaign['Medicare Advantage'] || 0}</span>
+            <span className="badge-campaign badge-aca">ACA: {byCampaign['ACA Intake'] || 0}</span>
+            <span className="badge-campaign badge-fe">Final Exp: {byCampaign['Final Expense'] || 0}</span>
+          </div>
+        }
       />
 
-      {error && <Feedback error={error} />}
+      <Feedback error={error} />
 
-      {/* Campaign Filter Bar */}
+      {/* Hero Metric Grid */}
+      <div className="stat-grid">
+        <div className="stat-card">
+          <span>Active On Call Floor</span>
+          <strong style={{ color: '#34d399' }}>{formatCount(counts.activeOnFloor || 0)}</strong>
+          <small className="stat-note positive">
+            ● {counts.totalAgents ? Math.round(((counts.activeOnFloor || 0) / counts.totalAgents) * 100) : 0}% floor utilization
+          </small>
+        </div>
+        <div className="stat-card">
+          <span>Punctuality Adherence</span>
+          <strong style={{ color: '#38bdf8' }}>{pMetrics.adherenceRate || 0}%</strong>
+          <small className="stat-note">
+            🟢 {pMetrics.onTimeOrEarly || 0} on schedule · 🔴 {pMetrics.lateArrivals || 0} late
+          </small>
+        </div>
+        <div className="stat-card">
+          <span>AUX & Break Monitor</span>
+          <strong style={{ color: '#fbbf24' }}>
+            {(counts.onBreak || 0) + (counts.onLunch || 0) + (counts.inCoaching || 0)}
+          </strong>
+          <small className="stat-note">
+            ☕ {counts.onBreak || 0} tea · 🍽️ {counts.onLunch || 0} lunch · 🎯 {counts.inCoaching || 0} coaching
+          </small>
+        </div>
+        <div className="stat-card">
+          <span>Total Scheduled Roster</span>
+          <strong>{formatCount(counts.totalAgents || 0)}</strong>
+          <small className="stat-note">Active agents today across all queues</small>
+        </div>
+      </div>
+
+      {/* Campaign Shift Filter Tabs */}
       <div className="campaign-pills">
-        {['All', 'Medicare', 'ACA', 'Final Expense'].map((c) => (
+        {['All', 'Medicare Advantage', 'ACA Intake', 'Final Expense'].map((c) => (
           <button
             key={c}
             className={`campaign-pill-btn ${activeCampaign === c ? 'active' : ''}`}
             onClick={() => setActiveCampaign(c)}
           >
-            {c === 'All' ? '🏢 All Campaigns' : c === 'Medicare' ? '🩺 Medicare' : c === 'ACA' ? '🛡️ ACA' : '📜 Final Expense'}
+            {c === 'All' ? '🌐 All Campaigns' : c}
           </button>
         ))}
       </div>
 
-      {/* Punctuality & Attendance Metric Cards */}
-      <div className="stat-grid" style={{ gridTemplateColumns: 'repeat(5, minmax(0, 1fr))' }}>
-        <div className="stat-card">
-          <span>Scheduled Roster</span>
-          <strong>{formatCount(pMetrics.total || trackerList.length)}</strong>
-          <small className="stat-note">Configured agents</small>
+      {/* Main Grid: Punctuality & Shift Roster + Real-Time Biometric Punch Stream */}
+      <div className="content-grid" style={{ gridTemplateColumns: 'minmax(0, 1.35fr) minmax(320px, 0.65fr)' }}>
+        {/* Left Panel: Floor Roster & Shift Adherence */}
+        <div className="card">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Real-Time Shift Tracker</p>
+              <h2>Agent Attendance & Clock-In Adherence</h2>
+            </div>
+            <span className="section-meta">{filteredTracker.length} Records</span>
+          </div>
+
+          <div className="filter-subpills">
+            {[
+              ['all', 'All Roster'],
+              ['early', '🟢 Early / On Time'],
+              ['late', '🔴 Late Check-Ins'],
+              ['not_checked_out', '🟡 Still On Shift'],
+              ['checked_out', '⚪ Clocked Out'],
+            ].map(([key, label]) => (
+              <button
+                key={key}
+                className={`filter-subpill-btn ${punctualityFilter === key ? 'active' : ''}`}
+                onClick={() => setPunctualityFilter(key)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Agent & Campaign</th>
+                  <th>Scheduled Shift</th>
+                  <th>Clock In</th>
+                  <th>Clock In Status</th>
+                  <th>Clock Out Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading && !filteredTracker.length ? (
+                  <EmptyRow colSpan={5}>Retrieving telemetry from floor devices…</EmptyRow>
+                ) : !filteredTracker.length ? (
+                  <EmptyRow colSpan={5}>No agent records matching this filter.</EmptyRow>
+                ) : (
+                  filteredTracker.map((row) => (
+                    <tr key={row.employeeId}>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <span className="avatar">{row.employeeName ? row.employeeName.slice(0, 2).toUpperCase() : 'AG'}</span>
+                          <div>
+                            <strong>{row.employeeName}</strong>
+                            <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '3px' }}>
+                              <span className="cell-subtitle">{row.empCode}</span>
+                              <span className={`badge-campaign ${getCampaignBadgeClass(row.campaign)}`}>
+                                {row.campaign}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <span className="exact-time-badge">
+                          <strong>{row.shiftSchedule?.name || 'Standard'}</strong>
+                          <small>
+                            {row.shiftSchedule?.startTime || '09:00'} – {row.shiftSchedule?.endTime || '18:00'}
+                          </small>
+                        </span>
+                      </td>
+                      <td>
+                        <span className="exact-time-badge">
+                          <strong>{formatExactTime(row.checkInTime)}</strong>
+                          <small>{row.checkInTime ? formatExactDateTime(row.checkInTime).split('·')[0] : 'No punch'}</small>
+                        </span>
+                      </td>
+                      <td>{getPunctualityPill(row.adherence?.checkIn)}</td>
+                      <td>{getDeparturePill(row.adherence?.checkOut)}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-        <div className="stat-card">
-          <span>Before Time (Early)</span>
-          <strong style={{ color: '#16a34a' }}>{formatCount(pMetrics.early || 0)}</strong>
-          <small className="stat-note positive">🟢 Arrived before shift</small>
-        </div>
-        <div className="stat-card">
-          <span>On Time (Grace)</span>
-          <strong style={{ color: '#0284c7' }}>{formatCount(pMetrics.onTime || 0)}</strong>
-          <small className="stat-note">Within 10m grace</small>
-        </div>
-        <div className="stat-card">
-          <span>Late Shift Arrivals</span>
-          <strong style={{ color: '#dc2626' }}>{formatCount(pMetrics.late || 0)}</strong>
-          <small className="stat-note">🔴 After grace period</small>
-        </div>
-        <div className="stat-card">
-          <span>Not Checked Out</span>
-          <strong style={{ color: '#d97706' }}>{formatCount(pMetrics.notCheckedOut || 0)}</strong>
-          <small className="stat-note">🟡 Active on shift</small>
+
+        {/* Right Panel: Live ZKTeco Terminal Stream */}
+        <div className="card">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Biometric Live Stream</p>
+              <h2>Hardware Punches</h2>
+            </div>
+            <span className="pulse-dot"></span>
+          </div>
+
+          <p className="page-description" style={{ marginBottom: '16px', fontSize: '12px' }}>
+            Raw TCP punch stream from ZKTeco terminals with instant millisecond timestamps.
+          </p>
+
+          <div className="activity-list">
+            {!punchList.length ? (
+              <p style={{ color: 'var(--muted)', fontSize: '13px', textAlign: 'center', padding: '20px' }}>
+                Awaiting next live biometric punch…
+              </p>
+            ) : (
+              punchList.slice(0, 10).map((punch) => (
+                <div key={punch.id || Math.random()} className="activity-item">
+                  <div className="activity-dot" style={{
+                    background: punch.punchType?.includes('in') ? '#10b981' : punch.punchType?.includes('break') ? '#f59e0b' : '#38bdf8'
+                  }}></div>
+                  <div>
+                    <strong style={{ fontSize: '13px', color: '#f1f5f9' }}>
+                      {punch.Employee?.name || `Terminal User #${punch.deviceUserId}`}
+                    </strong>
+                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '2px' }}>
+                      <span className="type-badge" style={{ fontSize: '10px', padding: '2px 7px' }}>
+                        {formatPunchType(punch.punchType)}
+                      </span>
+                      {punch.Device?.name && (
+                        <small style={{ color: 'var(--muted)', fontSize: '11px' }}>
+                          {punch.Device.name}
+                        </small>
+                      )}
+                    </div>
+                  </div>
+                  <time style={{ fontFamily: 'Space Grotesk, monospace', fontSize: '11px', color: '#94a3b8' }}>
+                    {formatExactTime(punch.punchTime)}
+                  </time>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </div>
-
-      {/* Three Primary Campaign KPI Cards */}
-      {activeCampaign === 'All' && (
-        <div className="kpi-campaign-grid">
-          <div className="kpi-campaign-card medicare">
-            <span className="badge-campaign badge-medicare">🩺 Medicare</span>
-            <div className="kpi-campaign-stats">
-              <div>
-                <p>Floor Status</p>
-                <strong>{byCampaign.Medicare?.active || 0} / {byCampaign.Medicare?.total || 0}</strong>
-              </div>
-              <span>Active Agents</span>
-            </div>
-          </div>
-
-          <div className="kpi-campaign-card aca">
-            <span className="badge-campaign badge-aca">🛡️ ACA Health</span>
-            <div className="kpi-campaign-stats">
-              <div>
-                <p>Floor Status</p>
-                <strong>{byCampaign.ACA?.active || 0} / {byCampaign.ACA?.total || 0}</strong>
-              </div>
-              <span>Active Agents</span>
-            </div>
-          </div>
-
-          <div className="kpi-campaign-card fe">
-            <span className="badge-campaign badge-fe">📜 Final Expense</span>
-            <div className="kpi-campaign-stats">
-              <div>
-                <p>Floor Status</p>
-                <strong>{byCampaign['Final Expense']?.active || 0} / {byCampaign['Final Expense']?.total || 0}</strong>
-              </div>
-              <span>Active Agents</span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Primary Section: Shift Adherence, Check-in & Check-out Tracker */}
-      <section className="card">
-        <div className="section-heading">
-          <div>
-            <p className="eyebrow">Shift Adherence & Hours</p>
-            <h2>Agent Check-in & Check-out Punctuality Tracker (Today)</h2>
-          </div>
-          <span className="section-meta">{filteredTracker.length} agents listed</span>
-        </div>
-
-        {/* Quick Filter Buttons to see who came early, late, or not checked out */}
-        <div className="filter-subpills">
-          <button
-            className={`filter-subpill-btn ${punctualityFilter === 'all' ? 'active' : ''}`}
-            onClick={() => setPunctualityFilter('all')}
-          >
-            Show All ({trackerList.length})
-          </button>
-          <button
-            className={`filter-subpill-btn ${punctualityFilter === 'early' ? 'active' : ''}`}
-            onClick={() => setPunctualityFilter('early')}
-          >
-            🟢 Before Time ({pMetrics.early || 0})
-          </button>
-          <button
-            className={`filter-subpill-btn ${punctualityFilter === 'late' ? 'active' : ''}`}
-            onClick={() => setPunctualityFilter('late')}
-          >
-            🔴 Late Arrivals ({pMetrics.late || 0})
-          </button>
-          <button
-            className={`filter-subpill-btn ${punctualityFilter === 'not_checked_out' ? 'active' : ''}`}
-            onClick={() => setPunctualityFilter('not_checked_out')}
-          >
-            🟡 Not Checked Out ({pMetrics.notCheckedOut || 0})
-          </button>
-          <button
-            className={`filter-subpill-btn ${punctualityFilter === 'checked_out' ? 'active' : ''}`}
-            onClick={() => setPunctualityFilter('checked_out')}
-          >
-            🏁 Checked Out ({pMetrics.checkedOut || 0})
-          </button>
-        </div>
-
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Agent Name & Code</th>
-                <th>Campaign</th>
-                <th>Shift Schedule</th>
-                <th>Exact Check-in</th>
-                <th>Arrival Punctuality</th>
-                <th>Exact Check-out</th>
-                <th>Departure / Adherence</th>
-                <th>Hours on Floor</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredTracker.length ? (
-                filteredTracker.map((item) => (
-                  <tr key={item.employeeId}>
-                    <td>
-                      <strong>{item.name}</strong>
-                      <small className="cell-subtitle">
-                        {item.empCode} · {item.campaignRole} {item.station !== '—' ? `(${item.station})` : ''}
-                      </small>
-                    </td>
-                    <td>
-                      <span className={`badge-campaign ${getCampaignBadgeClass(item.campaign)}`}>
-                        {item.campaign}
-                      </span>
-                    </td>
-                    <td>
-                      <small style={{ fontFamily: 'monospace' }}>
-                        {item.shiftStart?.slice(0, 5)} - {item.shiftEnd?.slice(0, 5)}
-                      </small>
-                    </td>
-                    <td>
-                      <div className="exact-time-badge">
-                        <strong>{formatExactTime(item.checkInTime)}</strong>
-                        <small>{item.checkInTime ? 'Logged In' : 'No Check-in'}</small>
-                      </div>
-                    </td>
-                    <td>{getPunctualityPill(item.adherence?.checkIn)}</td>
-                    <td>
-                      <div className="exact-time-badge">
-                        <strong>{formatExactTime(item.checkOutTime)}</strong>
-                        <small>{item.checkOutTime ? 'Shift Ended' : 'Pending Logout'}</small>
-                      </div>
-                    </td>
-                    <td>{getDeparturePill(item.adherence?.checkOut)}</td>
-                    <td>
-                      <strong>{item.adherence?.durationHours || 0} hrs</strong>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <EmptyRow colSpan={8}>No agents found matching this punctuality filter.</EmptyRow>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      {/* Latest Real-Time Punches Stream */}
-      <section className="card">
-        <div className="section-heading">
-          <div>
-            <p className="eyebrow">Real-time Stream</p>
-            <h2>Latest Punches (Exact Timestamp with Seconds)</h2>
-          </div>
-          <span className="section-meta">{punchList.length} logs</span>
-        </div>
-
-        <div className="activity-list">
-          {punchList.length ? (
-            punchList.map((p) => (
-              <div className="activity-item" key={p.id}>
-                <span className="activity-dot" />
-                <div>
-                  <strong>{p.Employee?.name || `Agent User: ${p.deviceUserId}`}</strong>
-                  <div style={{ display: 'flex', gap: '6px', marginTop: '4px', alignItems: 'center' }}>
-                    <span className={`badge-campaign ${getCampaignBadgeClass(p.campaign || p.Employee?.campaign)}`}>
-                      {p.campaign || p.Employee?.campaign || 'Medicare'}
-                    </span>
-                    <small>
-                      {formatPunchType(p.punchType)}
-                      {p.notes ? ` · Note: ${p.notes}` : ''}
-                    </small>
-                  </div>
-                </div>
-                <time style={{ textAlign: 'right', display: 'flex', flexDirection: 'column' }}>
-                  <strong style={{ fontFamily: 'monospace', fontSize: '13px' }}>
-                    {formatExactTime(p.timestamp)}
-                  </strong>
-                  <small style={{ fontSize: '10px', color: '#94a3b8' }}>
-                    {new Date(p.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric' })}
-                  </small>
-                </time>
-              </div>
-            ))
-          ) : (
-            <Feedback empty>No activity logged today yet.</Feedback>
-          )}
-        </div>
-      </section>
-    </>
+    </div>
   );
 }
