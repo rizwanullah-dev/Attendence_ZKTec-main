@@ -496,29 +496,33 @@ input:focus, select:focus {
 }
 .login-art {
   display: flex;
-  align-items: flex-end;
+  align-items: center; /* Vertically centered instead of flex-end */
+  justify-content: center;
   min-height: 100vh;
-  padding: clamp(30px, 7vw, 90px);
+  padding: clamp(30px, 5vw, 60px);
   color: #fff;
 }
-.login-art-content { max-width: 480px; }
+.login-art-content {
+  max-width: 500px;
+  width: 100%;
+}
 .login-art h1 {
-  margin: 20px 0 16px;
+  margin: 16px 0 14px;
   font-family: 'Space Grotesk', sans-serif;
-  font-size: clamp(36px, 4.5vw, 64px);
-  line-height: 1.02;
-  letter-spacing: -.05em;
+  font-size: clamp(32px, 3.8vw, 48px);
+  line-height: 1.1;
+  letter-spacing: -.04em;
   color: #fff;
 }
 .login-art h1 em { color: #38bdf8; font-style: normal; }
-.login-art p { color: #94a3b8; font-size: 16px; line-height: 1.6; }
-.login-quote { margin-top: 60px; color: #64748b; font-size: 13px; }
+.login-art p { color: #94a3b8; font-size: 15px; line-height: 1.6; }
+.login-quote { margin-top: 30px; color: #64748b; font-size: 13px; }
 .login-card {
-  width: min(420px, calc(100% - 40px));
+  width: min(440px, calc(100% - 40px));
   align-self: center;
   justify-self: center;
   background: #101927;
-  padding: 36px;
+  padding: 32px;
   border-radius: 14px;
   border: 1px solid var(--line);
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
@@ -542,4 +546,94 @@ input:focus, select:focus {
   border: 1px solid rgba(239, 68, 68, 0.3);
 }
 .empty-cell { padding: 36px; color: var(--muted); text-align: center; }
-.menu-toggle { display: none; }
+
+/* Responsive Media Queries for All Devices (Mobile, Tablet, Desktop) */
+@media (max-width: 1024px) {
+  .stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .content-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .layout {
+    flex-direction: column;
+  }
+  .menu-toggle {
+    display: block;
+    position: fixed;
+    top: 14px;
+    right: 14px;
+    z-index: 1000;
+    padding: 8px 12px;
+    background: #0284c7;
+    color: #fff;
+    border: 0;
+    border-radius: 6px;
+    font-size: 18px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  }
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 280px;
+    z-index: 999;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    box-shadow: 4px 0 24px rgba(0,0,0,0.7);
+  }
+  .sidebar.open {
+    transform: translateX(0);
+  }
+  .main {
+    padding: 60px 16px 24px;
+  }
+  .stat-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .page-actions {
+    width: 100%;
+  }
+  .command-heartbeat-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .login-page {
+    grid-template-columns: 1fr !important;
+  }
+  .login-art {
+    display: none;
+  }
+  .login-card {
+    width: 100%;
+    padding: 24px;
+  }
+}
+
+@media (max-width: 480px) {
+  .campaign-pills {
+    gap: 6px;
+  }
+  .campaign-pill-btn {
+    padding: 5px 10px;
+    font-size: 11px;
+  }
+  .toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .search-box {
+    width: 100%;
+  }
+}

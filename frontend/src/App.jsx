@@ -137,6 +137,27 @@ function Protected({ children }) {
   return isLoggedIn() ? children : <Navigate to="/login" replace />;
 }
 
+function RoleRouteGuard({ allowedRoles, children }) {
+  const user = getStoredUser();
+  const role = (user?.role || 'admin').toLowerCase();
+  if (allowedRoles && !allowedRoles.includes(role)) {
+    if (role === 'employee' || role === 'agent') return <Navigate to="/my-portal" replace />;
+    if (role === 'it' || role === 'tech') return <Navigate to="/it-ops" replace />;
+    if (role === 'hr') return <Navigate to="/employees" replace />;
+    return <Navigate to="/" replace />;
+  }
+  return children;
+}
+
+function HomeRouteRedirect() {
+  const user = getStoredUser();
+  const role = (user?.role || 'admin').toLowerCase();
+  if (role === 'employee' || role === 'agent') return <Navigate to="/my-portal" replace />;
+  if (role === 'it' || role === 'tech') return <Navigate to="/it-ops" replace />;
+  if (role === 'hr') return <Navigate to="/employees" replace />;
+  return <Dashboard />;
+}
+
 function Layout({ children }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
@@ -146,45 +167,39 @@ function Layout({ children }) {
   useEffect(() => setMenuOpen(false), [location.pathname]);
   const userRole = (user?.role || 'admin').toLowerCase();
 
-  // Role-based navigation links
+  // Strict role-based navigation links:
+  // ONLY relevant items are included per role, zero cross-module clutter.
   let links = [];
   if (userRole === 'employee' || userRole === 'agent') {
     links = [
-      ['/my-portal', '👤', 'My Daily Punches & ESS'],
-      ['/leaves', '📅', 'My Leave Requests'],
-      ['/payroll', '💵', 'My Salary & Payslip'],
-      ['/leaderboard', '🏆', 'Floor Leaderboard'],
+      ['/my-portal', '👤', 'My Attendance & Punches'],
+      ['/leaves', '📅', 'Apply for Leave'],
+      ['/payroll', '💵', 'My Payslip & Salary'],
     ];
   } else if (userRole === 'it' || userRole === 'tech') {
     links = [
-      ['/it-ops', '💻', 'IT & Terminal Console'],
-      ['/devices', '⌁', 'ZKTeco Hardware Network'],
+      ['/it-ops', '💻', 'IT Hardware Console'],
+      ['/devices', '⌁', 'ZKTeco Terminals Fleet'],
       ['/attendance', '✓', 'Raw Punch Stream'],
-      ['/', '⌂', 'Floor Overview'],
     ];
   } else if (userRole === 'hr') {
     links = [
-      ['/', '⌂', 'Floor Dashboard'],
-      ['/employees', '◉', 'Employee Records'],
+      ['/employees', '◉', 'Employee Management'],
       ['/leaves', '📅', 'Leave Approvals'],
       ['/payroll', '💵', 'Payroll & Deductions'],
-      ['/shifts', '⏱', 'Shift Rosters'],
-      ['/attendance', '✓', 'Attendance Records'],
-      ['/reports', '▥', 'Campaign Reports'],
+      ['/reports', '▥', 'Attendance Reports'],
     ];
   } else {
-    // Admin / Ops Full Access
+    // Admin / Floor Operations Leadership
     links = [
-      ['/', '⌂', 'Command Center'],
-      ['/my-portal', '👤', 'Employee Portal View'],
+      ['/', '⌂', 'Floor Command Center'],
       ['/attendance', '✓', 'Live Punches & AUX'],
       ['/breaks', '☕', 'Break Time Monitor'],
       ['/leaderboard', '🏆', 'Adherence Leaderboard'],
-      ['/shifts', '⏱', 'Shift Schedules'],
+      ['/shifts', '⏱', 'Campaign Shift Schedules'],
+      ['/employees', '◉', 'Employee Management'],
       ['/leaves', '📅', 'FlowHCM Leaves'],
       ['/payroll', '💵', 'FlowHCM Payroll'],
-      ['/employees', '◉', 'Agent Roster'],
-      ['/it-ops', '💻', 'IT Hardware Console'],
       ['/reports', '▥', 'Campaign Reports'],
       ['/devices', '⌁', 'Biometric Devices'],
     ];
@@ -235,48 +250,15 @@ function Layout({ children }) {
           ))}
         </nav>
         <div className="sidebar-footer">
-          {/* Quick Role Switcher for Unified Systems */}
-          <div style={{ marginBottom: '14px', padding: '0 4px' }}>
-            <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.08em', color: '#64748b', display: 'block', marginBottom: '6px' }}>
-              Portal Perspective
-            </span>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '4px' }}>
-              {[
-                ['admin', 'Admin'],
-                ['hr', 'HR'],
-                ['it', 'IT'],
-                ['employee', 'Agent'],
-              ].map(([r, label]) => (
-                <button
-                  key={r}
-                  type="button"
-                  onClick={() => switchRole(r)}
-                  style={{
-                    padding: '4px 2px',
-                    fontSize: '10px',
-                    fontWeight: userRole === r ? '700' : '500',
-                    background: userRole === r ? '#0284c7' : '#1e293b',
-                    color: userRole === r ? '#fff' : '#94a3b8',
-                    border: '1px solid',
-                    borderColor: userRole === r ? '#0284c7' : '#334155',
-                    borderRadius: '4px',
-                  }}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-
           <div className="user-chip">
             <span className="avatar">{initials(user?.name || user?.email || 'A')}</span>
             <span>
-              <strong>{user?.name || user?.email?.split('@')[0] || 'Admin'}</strong>
-              <small>{humanize(user?.role || 'admin')}</small>
+              <strong>{user?.name || user?.email?.split('@')[0] || 'User'}</strong>
+              <small>{humanize(user?.role || 'admin')} Portal</small>
             </span>
           </div>
           <button className="logout-button" onClick={logout}>
-            ↪ Sign out
+            ↪ Switch Role / Sign out
           </button>
         </div>
       </aside>
@@ -327,7 +309,7 @@ export default function App() {
           element={
             <Protected>
               <Layout>
-                <Dashboard />
+                <HomeRouteRedirect />
               </Layout>
             </Protected>
           }
@@ -336,9 +318,11 @@ export default function App() {
           path="/employees"
           element={
             <Protected>
-              <Layout>
-                <Employees />
-              </Layout>
+              <RoleRouteGuard allowedRoles={['admin', 'hr']}>
+                <Layout>
+                  <Employees />
+                </Layout>
+              </RoleRouteGuard>
             </Protected>
           }
         />
@@ -346,9 +330,11 @@ export default function App() {
           path="/attendance"
           element={
             <Protected>
-              <Layout>
-                <Attendance />
-              </Layout>
+              <RoleRouteGuard allowedRoles={['admin', 'hr', 'it']}>
+                <Layout>
+                  <Attendance />
+                </Layout>
+              </RoleRouteGuard>
             </Protected>
           }
         />
@@ -356,9 +342,11 @@ export default function App() {
           path="/breaks"
           element={
             <Protected>
-              <Layout>
-                <BreakMonitor />
-              </Layout>
+              <RoleRouteGuard allowedRoles={['admin']}>
+                <Layout>
+                  <BreakMonitor />
+                </Layout>
+              </RoleRouteGuard>
             </Protected>
           }
         />
@@ -376,9 +364,11 @@ export default function App() {
           path="/shifts"
           element={
             <Protected>
-              <Layout>
-                <Shifts />
-              </Layout>
+              <RoleRouteGuard allowedRoles={['admin', 'hr']}>
+                <Layout>
+                  <Shifts />
+                </Layout>
+              </RoleRouteGuard>
             </Protected>
           }
         />
@@ -386,9 +376,11 @@ export default function App() {
           path="/my-portal"
           element={
             <Protected>
-              <Layout>
-                <EmployeePortal />
-              </Layout>
+              <RoleRouteGuard allowedRoles={['employee', 'agent', 'admin']}>
+                <Layout>
+                  <EmployeePortal />
+                </Layout>
+              </RoleRouteGuard>
             </Protected>
           }
         />
@@ -396,9 +388,11 @@ export default function App() {
           path="/it-ops"
           element={
             <Protected>
-              <Layout>
-                <ITOps />
-              </Layout>
+              <RoleRouteGuard allowedRoles={['it', 'tech', 'admin']}>
+                <Layout>
+                  <ITOps />
+                </Layout>
+              </RoleRouteGuard>
             </Protected>
           }
         />
@@ -406,9 +400,11 @@ export default function App() {
           path="/leaves"
           element={
             <Protected>
-              <Layout>
-                <Leaves />
-              </Layout>
+              <RoleRouteGuard allowedRoles={['admin', 'hr', 'employee', 'agent']}>
+                <Layout>
+                  <Leaves />
+                </Layout>
+              </RoleRouteGuard>
             </Protected>
           }
         />
@@ -416,9 +412,11 @@ export default function App() {
           path="/payroll"
           element={
             <Protected>
-              <Layout>
-                <Payroll />
-              </Layout>
+              <RoleRouteGuard allowedRoles={['admin', 'hr', 'employee', 'agent']}>
+                <Layout>
+                  <Payroll />
+                </Layout>
+              </RoleRouteGuard>
             </Protected>
           }
         />
@@ -426,9 +424,11 @@ export default function App() {
           path="/reports"
           element={
             <Protected>
-              <Layout>
-                <Reports />
-              </Layout>
+              <RoleRouteGuard allowedRoles={['admin', 'hr']}>
+                <Layout>
+                  <Reports />
+                </Layout>
+              </RoleRouteGuard>
             </Protected>
           }
         />
@@ -436,9 +436,11 @@ export default function App() {
           path="/devices"
           element={
             <Protected>
-              <Layout>
-                <Devices />
-              </Layout>
+              <RoleRouteGuard allowedRoles={['admin', 'it']}>
+                <Layout>
+                  <Devices />
+                </Layout>
+              </RoleRouteGuard>
             </Protected>
           }
         />
