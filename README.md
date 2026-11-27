@@ -1,82 +1,107 @@
-# Employee Attendance & Management App
+# Unified Systems — Human Capital & Biometric Workforce Management System
 
-Live-syncs punch data from ZKTeco 40 & 50i devices (network push + polling
-fallback), manages employees, and generates attendance reports.
+An enterprise-grade **Human Capital Management (HCM) and Workforce Management (WFM)** platform custom-built for **Unified Systems** call center operations. It features real-time biometric synchronization with **ZKTeco 40 and 50i hardware terminals** (via TCP port 4370), live shift adherence, AUX break monitoring, FlowHCM-inspired leave & payroll automation, and strict role-segregated portals.
 
-## Stack (all free / open-source)
-- **Backend**: Node.js + Express + Sequelize
-- **Database**: PostgreSQL (self-host via Docker, or free tier on Supabase/Neon/Render)
-- **Frontend**: React + Vite
-- **Device link**: `node-zklib` — standard ZKTeco TCP protocol (port 4370), used both for the live real-time listener and the polling fallback
-- **Hosting**: Docker Compose included for self-hosting on any VPS/office server for $0 in licensing; or deploy backend+DB free tier on Render/Railway/Fly.io and frontend free on Netlify/Vercel/GitHub Pages
+---
 
-## Quick start (local / Docker)
+## 🌟 Key Highlights & Architecture
+
+- **Official Call Center Identity**: Unified Systems branding, custom executive oceanic navy/cyan design theme, and official company emblem.
+- **Hardware Integration**: Live socket push listener + 5-minute automated polling fallback for **ZKTeco 40 & 50i** devices using `node-zklib` over TCP port 4370.
+- **FlowHCM Super Modules**:
+  - **Leave & Absence Management**: Self-service leave applications with multi-tier HR approvals to prevent false absenteeism on the floor.
+  - **Automated Biometric Payroll**: Single-click salary calculation directly factoring in days worked, verified overtime hours, and minute-accurate late arrival penalties.
+- **Strict Role-Based Access Control (RBAC)**: Dedicated, isolated portals for **Employees (Agents)**, **HR Managers**, **IT Engineers**, and **Operations Administrators** with zero cross-module clutter or unauthorized access.
+- **Responsive Command Center**: Fully responsive interface optimized for mobile devices, supervisor tablets, and large wall-mounted floor monitors.
+
+---
+
+## 🔐 Official Module Login Credentials
+
+Each role accesses their own dedicated dashboard with custom options and strict security guards upon login:
+
+| Role / Module | Official Email ID | Default Password | Default Landing Dashboard | Scope of Access |
+| :--- | :--- | :--- | :--- | :--- |
+| **Call Center Agent (Employee ESS)** | `sarah.chen@unifiedsystems.com` | `Unified2026!` | `#/my-portal` | Personal daily biometric punches (Clock In/Out, Tea, Lunch), shift schedule, personal leave requests, and private payslip. |
+| **HR & People Manager** | `hr@unifiedsystems.com` | `Unified2026!` | `#/employees` | Employee directory, leave approval queue (Approve/Reject), company-wide payroll generation, and attendance audit reports. |
+| **IT & Hardware Engineer** | `it@unifiedsystems.com` | `Unified2026!` | `#/it-ops` | ZKTeco 40 & 50i terminal fleet diagnostics, IP/Port 4370 TCP socket health, ping latencies, and raw biometric stream. |
+| **Operations Admin** | `admin@unifiedsystems.com` | `Unified2026!` | `#/` | Executive Floor Command Center, real-time floor occupancy, campaign filters (Medicare, ACA, Final Expense), break monitor, and full system configuration. |
+
+---
+
+## 🖥️ Modular Overview & Features
+
+### 1. Employee Self-Service (ESS) Portal (`#/my-portal`)
+- **Daily Biometric Punches**: Displays exact millisecond timestamps from ZKTeco terminals for Shift Clock In, Tea Break Exit/Return, Lunch Break Exit/Return, and Shift Clock Out.
+- **Assigned Shift Card**: Live feedback on scheduled shift hours (e.g. `09:00 AM – 06:00 PM`), punctuality status (e.g. `8 mins early`), and floor state (`🟢 Verified On Floor`).
+- **Personal Entitlements**: Real-time view of remaining casual, sick, and annual leave quotas and verified overtime hours.
+- **Apply for Leave**: Paperless leave request submissions.
+- **Private Payslip**: Direct viewing and download of monthly salary calculations.
+
+### 2. HR & People Operations Portal (`#/employees`, `#/leaves`, `#/payroll`)
+- **Employee Directory**: Manage agent profiles, designations, campaigns, and physical station assignments.
+- **Leave Approvals Engine**: Centralized queue to approve or reject leave applications, automatically updating attendance exception lists.
+- **Automated Payroll**: Calculates gross base pay, verified overtime compensation, and minute-level late arrival deductions with one-click bank export capabilities.
+- **Campaign Attendance Reports**: Date-range summaries filtering by Medicare Advantage, ACA Intake, and Final Expense campaigns with Excel export support.
+
+### 3. IT Infrastructure & Hardware Console (`#/it-ops`, `#/devices`)
+- **Biometric Fleet Monitoring**: Real-time operational status (Online / Offline), ping latency (ms), and firmware versions across all connected ZKTeco readers:
+  - *Main Lobby Reader* (ZKTeco 40 - IP `192.168.1.201:4370`)
+  - *Call Center Floor 1 Gate* (ZKTeco 50i - IP `192.168.1.202:4370`)
+  - *Executive Suite Gate* (ZKTeco 40 - IP `192.168.1.203:4370`)
+  - *Server Room Gate* (ZKTeco 50i - IP `192.168.1.204:4370`)
+- **Socket Diagnostics**: Live TCP socket tests and packet telemetry.
+- **Raw Punch Stream**: Direct view of hardware punch events in real time.
+
+### 4. Operations Floor Command Center (`#/`)
+- **Real-Time Floor Strength**: Active call floor agent counts, percentage floor utilization, and punctuality adherence scores.
+- **Campaign Filters**: Instant switcher between **Medicare Advantage**, **ACA Intake**, and **Final Expense**.
+- **Supervisor Break & AUX Monitor**: Live tracking of agents on 15-minute tea breaks, 45-minute lunch breaks, and offline coaching sessions, with automatic warnings for overruns.
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+- Node.js (v18 or higher recommended)
+- PostgreSQL (or Docker for running containerized DB)
+- ZKTeco devices connected to the local network on TCP port 4370
+
+### Quick Start (Frontend Development)
 ```bash
-git clone <this repo>
-cd attendance-app
-docker compose up -d --build
-docker compose exec backend npm run migrate   # creates tables + seeds admin user
-```
-Then open http://localhost:5173 and log in with:
-- email: `admin@example.com`
-- password: `ChangeMe123!` (change immediately — see Users below)
+# 1. Clone repository
+git clone https://github.com/rizwanullah-dev/Attendence_ZKTec-main.git
+cd Attendence_ZKTec-main
 
-## Quick start (manual, no Docker)
-```bash
-# 1. Postgres running locally, then:
-cd backend
-cp .env.example .env   # fill in DB creds, JWT_SECRET
-npm install
-npm run migrate
-npm run dev
-
-# 2. In a second terminal:
+# 2. Install dependencies
 cd frontend
 npm install
-npm run dev
+
+# 3. Start live server
+npm run dev -- --host 0.0.0.0 --port 5173
+```
+Open **`http://localhost:5173/`** in your browser.
+
+### Backend Setup (PostgreSQL + ZKTeco Link)
+```bash
+cd backend
+cp .env.example .env   # Configure DB_HOST, DB_USER, DB_PASSWORD, JWT_SECRET
+npm install
+npm run migrate        # Runs database schema migrations
+npm run dev            # Starts backend API on port 5000
 ```
 
-## Connecting your ZKTeco devices
-1. On each device, note its **IP address** and make sure it's reachable
-   from the server on **port 4370** (device menu: Comm → Ethernet). Both the
-   40 and 50i speak the same TCP protocol node-zklib uses.
-2. In the app, go to **Devices → Add Device**, enter the IP/port.
-3. The server opens a persistent connection and starts receiving punches
-   in real time as they happen (`getRealTimeLogs`), plus a scheduled pull
-   every `DEVICE_POLL_INTERVAL_MINUTES` (default 5) as a safety net if the
-   live connection drops or the device was offline.
-4. Employees are matched to punches by **device user ID** — set this field
-   when creating/importing an employee to match how they're registered on
-   the physical device (fingerprint/card enrollment ID).
+---
 
-## Manual file import (fallback for your current workflow)
-If you ever need to fall back to manually exporting data from a device (as
-you do today) instead of relying on live sync:
-- **Attendance → Manual Import** accepts multiple files at once, any mix of
-  `.csv`, `.xlsx`/`.xls`, or raw `.dat`/`.txt` exports from the device software.
-- **Employees → Bulk Import** accepts CSV/Excel with columns:
-  `empCode, deviceUserId, name, department, designation, email, phone`
+## 🛠️ Technology Stack
 
-## Reports
-- **Reports** page: date-range summary per employee — days present/absent,
-  late days, total hours — viewable in-app or exported to Excel.
+- **Frontend**: React 18, Vite, React Router DOM (v6), Modern Vanilla CSS with responsive design system.
+- **Backend**: Node.js, Express, Sequelize ORM.
+- **Database**: PostgreSQL.
+- **Hardware Driver**: `node-zklib` (ZKTeco Standalone TCP Protocol, port 4370).
+- **Design System**: Unified Systems Executive Dark Command Palette (`#090E17`, `#0284C7`, `#10B981`, `#06B6D4`).
 
-## Users & roles
-Roles: `admin` (full access, manage devices/users), `hr` (manage employees,
-import data), `viewer` (read-only reports). Create additional users via
-`POST /api/auth/users` (admin only) once logged in.
+---
 
-## Production hardening checklist (before going fully live)
-- [ ] Change `JWT_SECRET` and the seeded admin password
-- [ ] Put the backend behind HTTPS (nginx/Caddy reverse proxy or your host's built-in TLS)
-- [ ] Set proper Postgres backups (pg_dump cron, or managed provider's automatic backups)
-- [ ] Restrict `FRONTEND_URL` CORS origin to your real domain
-- [ ] Add rate limiting on `/api/auth/login` (e.g. `express-rate-limit`)
-- [ ] Set up device IP allow-listing / VPN if devices are on a different network than the server
-- [ ] Add monitoring/alerting for device `offline` status (e.g. email/Slack webhook when a device drops)
-
-## Suggested next features
-- Shift/roster management (per-employee or per-department shift patterns feeding the late/absent logic)
-- Leave management (so approved leave doesn't count as "absent")
-- Push notifications when a device goes offline
-- Employee self-service portal (view own attendance, request corrections)
+## 🔒 Security & Route Protection
+All routes are guarded by client-side and server-side authorization checks (`RoleRouteGuard`). If any authenticated user attempts to access an unauthorized URL (e.g. an employee manually typing `#/devices` or `#/employees`), the system automatically intercepts the attempt and redirects them back to their authorized dashboard.

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { PageHeader, formatCount } from '../App.jsx';
+import { PageHeader, formatCount, getStoredUser } from '../App.jsx';
 
 const PAYROLL_DATA = [
   { id: 1, empCode: 'US-101', name: 'Sarah Chen', campaign: 'Medicare Advantage', baseSalary: 85000, daysWorked: 22, lateMins: 0, overtimeHrs: 6.5, deductions: 0, netSalary: 91500, status: 'Calculated' },
@@ -10,76 +10,91 @@ const PAYROLL_DATA = [
 ];
 
 export default function Payroll() {
-  const [cycle, setCycle] = useState('November 2026 (Monthly)');
-  const [data, setData] = useState(PAYROLL_DATA);
-  const [processed, setProcessed] = useState(false);
+  const user = getStoredUser();
+  const isEmployee = user?.role === 'employee' || user?.role === 'agent';
+  const myCode = user?.empCode || 'US-101';
+
+  const [cycle] = useState('November 2026 (Monthly)');
+  // If Employee, only show their own payroll record; if HR/Admin show entire floor
+  const [data] = useState(
+    isEmployee ? PAYROLL_DATA.filter(p => p.empCode === myCode) : PAYROLL_DATA
+  );
 
   const totalPayout = data.reduce((sum, item) => sum + item.netSalary, 0);
   const totalDeductions = data.reduce((sum, item) => sum + item.deductions, 0);
   const totalOvertime = data.reduce((sum, item) => sum + item.overtimeHrs, 0);
 
   function runSyncBiometrics() {
-    setProcessed(true);
-    setTimeout(() => {
-      alert('Unified Systems: Biometric punches and shift allowances synced successfully!');
-    }, 400);
+    alert('Unified Systems: Biometric punches and shift allowances synced successfully!');
   }
 
   return (
     <div>
       <PageHeader
-        eyebrow="FlowHCM Module"
-        title="Automated Payroll & Deductions"
-        description="Single-click payroll calculation directly driven by ZKTeco hardware punches, late arrivals, and approved leaves."
+        eyebrow="FlowHCM Payroll Module"
+        title={isEmployee ? "My Salary & Payslip Details" : "Automated Payroll & Deductions"}
+        description={isEmployee 
+          ? "View your personal earnings, verified biometric overtime, and attendance deduction breakdown."
+          : "Single-click payroll calculation directly driven by ZKTeco hardware punches, late arrivals, and approved leaves."}
         actions={
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <button className="button-secondary" onClick={runSyncBiometrics}>
-              ⚡ Sync ZKTeco Biometrics
+          isEmployee ? (
+            <button className="button-label" onClick={() => alert('Downloading official Unified Systems PDF Payslip...')}>
+              📄 Download Official Payslip (PDF)
             </button>
-            <button className="button-label" onClick={() => alert('Exporting Official Unified Systems Payroll Report (Excel)...')}>
-              📥 Export Bank Payroll File
-            </button>
-          </div>
+          ) : (
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button className="button-secondary" onClick={runSyncBiometrics}>
+                ⚡ Sync ZKTeco Biometrics
+              </button>
+              <button className="button-label" onClick={() => alert('Exporting Official Unified Systems Payroll Report (Excel)...')}>
+                📥 Export Bank Payroll File
+              </button>
+            </div>
+          )
         }
       />
 
       <div className="stat-grid">
         <div className="stat-card">
-          <span>Total Net Payout</span>
-          <strong style={{ color: '#0369a1' }}>${formatCount(totalPayout)}</strong>
-          <small className="stat-note positive">Active cycle disbursement</small>
+          <span>{isEmployee ? "Net Disbursed Amount" : "Total Net Payout"}</span>
+          <strong style={{ color: '#38bdf8' }}>${formatCount(totalPayout)}</strong>
+          <small className="stat-note positive">{cycle}</small>
         </div>
         <div className="stat-card">
-          <span>Biometric Deductions</span>
-          <strong style={{ color: '#cf4051' }}>${formatCount(totalDeductions)}</strong>
-          <small className="stat-note">Late penalties & unapproved leaves</small>
+          <span>Attendance Deductions</span>
+          <strong style={{ color: totalDeductions > 0 ? '#ef4444' : '#10b981' }}>
+            ${formatCount(totalDeductions)}
+          </strong>
+          <small className="stat-note">{isEmployee ? "Zero late penalty" : "Late penalties & unapproved leaves"}</small>
         </div>
         <div className="stat-card">
-          <span>Overtime Hours</span>
-          <strong style={{ color: '#159570' }}>{totalOvertime} hrs</strong>
-          <small className="stat-note positive">Verified biometric extra hours</small>
+          <span>Verified Overtime</span>
+          <strong style={{ color: '#10b981' }}>{totalOvertime} hrs</strong>
+          <small className="stat-note positive">Hardware timestamp verified</small>
         </div>
         <div className="stat-card">
-          <span>Active Agents</span>
-          <strong>{data.length} Staff</strong>
-          <small className="stat-note">Unified Systems Call Center</small>
+          <span>{isEmployee ? "Days Present" : "Active Staff"}</span>
+          <strong>{isEmployee ? "22 Days" : `${data.length} Staff`}</strong>
+          <small className="stat-note">{isEmployee ? "100% floor attendance" : "Unified Systems Roster"}</small>
         </div>
       </div>
 
       <div className="card">
         <div className="toolbar" style={{ marginBottom: '16px' }}>
           <div>
-            <strong>Cycle: </strong>
-            <span style={{ color: '#0284c7', fontWeight: 600 }}>{cycle}</span>
+            <strong>Payroll Cycle: </strong>
+            <span style={{ color: '#38bdf8', fontWeight: 600 }}>{cycle}</span>
           </div>
-          <span className="section-meta">Calculated based on standard 8-hr floor shifts</span>
+          <span className="section-meta">
+            {isEmployee ? "Individual Salary Statement" : "Calculated from standard 8-hr floor shifts"}
+          </span>
         </div>
 
         <div className="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>Agent</th>
+                <th>{isEmployee ? "Employee Profile" : "Agent"}</th>
                 <th>Campaign</th>
                 <th>Base Pay</th>
                 <th>Days Worked</th>
@@ -103,18 +118,20 @@ export default function Payroll() {
                   <td>${formatCount(row.baseSalary)}</td>
                   <td><strong>{row.daysWorked}</strong> days</td>
                   <td>
-                    <span style={{ color: row.lateMins > 0 ? '#b91c1c' : '#15803d', fontWeight: 600 }}>
+                    <span style={{ color: row.lateMins > 0 ? '#f87171' : '#34d399', fontWeight: 600 }}>
                       {row.lateMins} m
                     </span>
                   </td>
                   <td>
-                    <span style={{ color: row.overtimeHrs > 0 ? '#15803d' : '#64748b', fontWeight: 600 }}>
+                    <span style={{ color: row.overtimeHrs > 0 ? '#34d399' : '#94a3b8', fontWeight: 600 }}>
                       +{row.overtimeHrs} h
                     </span>
                   </td>
-                  <td style={{ color: '#cf4051', fontWeight: 600 }}>-${formatCount(row.deductions)}</td>
+                  <td style={{ color: row.deductions > 0 ? '#f87171' : '#94a3b8', fontWeight: 600 }}>
+                    -${formatCount(row.deductions)}
+                  </td>
                   <td>
-                    <strong style={{ color: '#0f172a', fontSize: '15px' }}>${formatCount(row.netSalary)}</strong>
+                    <strong style={{ color: '#f8fafc', fontSize: '15px' }}>${formatCount(row.netSalary)}</strong>
                   </td>
                   <td>
                     <span className="status-pill online">

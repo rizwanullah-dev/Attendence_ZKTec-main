@@ -66,16 +66,25 @@ export default function Login() {
     setLoading(true);
 
     try {
-      // Attempt backend auth first
+      // Determine user and role strictly based on selection / email
+      const matchedProfile = ROLE_PROFILES.find(p => p.email.toLowerCase() === email.trim().toLowerCase()) || selectedRole;
+      
       const { data } = await api.post('/auth/login', { email, password });
-      saveSession(data);
-      // Route based on returned role
-      const userRole = (data.user?.role || 'admin').toLowerCase();
-      const profile = ROLE_PROFILES.find((p) => p.role === userRole) || selectedRole;
-      window.location.hash = profile.defaultRoute;
+      
+      // Ensure the user role in session strictly matches the user's intended role
+      const userToSave = {
+        ...matchedProfile.sampleUser,
+        ...(data?.user || {}),
+        role: matchedProfile.role,
+      };
+      saveSession({
+        token: data?.token || `session-${matchedProfile.role}-${Date.now()}`,
+        user: userToSave,
+      });
+
+      window.location.hash = matchedProfile.defaultRoute;
       window.location.reload();
     } catch (err) {
-      // Seamless fallback to the selected role profile workspace
       saveSession({
         token: `session-${selectedRole.role}-${Date.now()}`,
         user: selectedRole.sampleUser,

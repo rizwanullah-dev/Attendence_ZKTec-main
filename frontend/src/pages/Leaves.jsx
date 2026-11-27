@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { PageHeader, Feedback, formatCount } from '../App.jsx';
+import { PageHeader, Feedback, formatCount, getStoredUser } from '../App.jsx';
 
 const INITIAL_LEAVES = [
   { id: 1, empName: 'Sarah Chen', empCode: 'US-101', type: 'Annual Leave', from: '2026-11-30', to: '2026-12-02', days: 3, reason: 'Family vacation', status: 'Approved' },
@@ -10,9 +10,16 @@ const INITIAL_LEAVES = [
 ];
 
 export default function Leaves() {
-  const [leaves, setLeaves] = useState(INITIAL_LEAVES);
+  const user = getStoredUser();
+  const isEmployee = user?.role === 'employee' || user?.role === 'agent';
+  const myCode = user?.empCode || 'US-101';
+
+  // If Employee, strictly isolate to their own leaves; if HR/Admin, show organization queue
+  const [leaves, setLeaves] = useState(
+    isEmployee ? INITIAL_LEAVES.filter(l => l.empCode === myCode) : INITIAL_LEAVES
+  );
   const [filter, setFilter] = useState('ALL');
-  const [newLeave, setNewLeave] = useState({ empName: '', empCode: '', type: 'Casual Leave', from: '', to: '', reason: '' });
+  const [newLeave, setNewLeave] = useState({ empName: user?.name || '', empCode: myCode, type: 'Casual Leave', from: '', to: '', reason: '' });
   const [showModal, setShowModal] = useState(false);
 
   const filtered = leaves.filter(item => {
@@ -21,29 +28,34 @@ export default function Leaves() {
   });
 
   function handleAction(id, newStatus) {
+    if (isEmployee) return;
     setLeaves(prev => prev.map(l => l.id === id ? { ...l, status: newStatus } : l));
   }
 
   function handleCreate(e) {
     e.preventDefault();
-    if (!newLeave.empName || !newLeave.from) return;
+    if (!newLeave.from) return;
     const item = {
       id: Date.now(),
       ...newLeave,
+      empName: user?.name || newLeave.empName || 'Sarah Chen',
+      empCode: myCode,
       days: 1,
       status: 'Pending'
     };
     setLeaves([item, ...leaves]);
     setShowModal(false);
-    setNewLeave({ empName: '', empCode: '', type: 'Casual Leave', from: '', to: '', reason: '' });
+    setNewLeave({ empName: user?.name || '', empCode: myCode, type: 'Casual Leave', from: '', to: '', reason: '' });
   }
 
   return (
     <div>
       <PageHeader
-        eyebrow="FlowHCM Module"
-        title="Leave & Absence Management"
-        description="Unified Systems employee absence requests, entitlement balances, and manager multi-tier approvals."
+        eyebrow="FlowHCM Leave Module"
+        title={isEmployee ? "My Leave Requests" : "Leave Approvals & Absence Management"}
+        description={isEmployee 
+          ? "Submit and track your personal vacation, casual, and medical leave requests."
+          : "Unified Systems employee absence requests, entitlement balances, and manager multi-tier approvals."}
         actions={
           <button className="button-label" onClick={() => setShowModal(true)}>
             + Submit Leave Request
@@ -53,23 +65,23 @@ export default function Leaves() {
 
       <div className="stat-grid">
         <div className="stat-card">
-          <span>Total Requests</span>
+          <span>{isEmployee ? "My Total Requests" : "Total Requests"}</span>
           <strong>{formatCount(leaves.length)}</strong>
           <small className="stat-note">Current payroll cycle</small>
         </div>
         <div className="stat-card">
-          <span>Pending Approvals</span>
+          <span>{isEmployee ? "Awaiting HR Review" : "Pending Approvals"}</span>
           <strong style={{ color: '#d97706' }}>{formatCount(leaves.filter(l => l.status === 'Pending').length)}</strong>
-          <small className="stat-note">Requires HR/Manager review</small>
+          <small className="stat-note">{isEmployee ? "Submitted to supervisor" : "Requires HR action"}</small>
         </div>
         <div className="stat-card">
           <span>Approved Leaves</span>
-          <strong style={{ color: '#15803d' }}>{formatCount(leaves.filter(l => l.status === 'Approved').length)}</strong>
-          <small className="stat-note">Attendance auto-credited</small>
+          <strong style={{ color: '#10b981' }}>{formatCount(leaves.filter(l => l.status === 'Approved').length)}</strong>
+          <small className="stat-note">Biometrics credited</small>
         </div>
         <div className="stat-card">
-          <span>Avg Entitlement Remaining</span>
-          <strong>14.2 Days</strong>
+          <span>{isEmployee ? "My Leave Balance" : "Avg Entitlement Remaining"}</span>
+          <strong style={{ color: '#38bdf8' }}>{isEmployee ? "14 Days" : "14.2 Days"}</strong>
           <small className="stat-note positive">Standard annual quota</small>
         </div>
       </div>
@@ -94,55 +106,59 @@ export default function Leaves() {
           <table>
             <thead>
               <tr>
-                <th>Employee</th>
+                {!isEmployee && <th>Employee</th>}
                 <th>Leave Type</th>
                 <th>Duration</th>
                 <th>Days</th>
                 <th>Reason</th>
                 <th>Status</th>
-                <th>Actions</th>
+                {!isEmployee && <th>Actions</th>}
               </tr>
             </thead>
             <tbody>
               {filtered.map(row => (
                 <tr key={row.id}>
-                  <td>
-                    <strong>{row.empName}</strong>
-                    <span className="cell-subtitle">{row.empCode}</span>
-                  </td>
+                  {!isEmployee && (
+                    <td>
+                      <strong>{row.empName}</strong>
+                      <span className="cell-subtitle">{row.empCode}</span>
+                    </td>
+                  )}
                   <td><span className="type-badge">{row.type}</span></td>
                   <td>
                     <strong>{row.from}</strong> {row.to && row.to !== row.from ? `to ${row.to}` : ''}
                   </td>
                   <td><strong>{row.days}</strong></td>
-                  <td style={{ maxWidth: '240px', color: '#64748b' }}>{row.reason}</td>
+                  <td style={{ maxWidth: '240px', color: '#94a3b8' }}>{row.reason}</td>
                   <td>
                     <span className={`status-pill ${row.status === 'Approved' ? 'online' : row.status === 'Rejected' ? 'offline' : 'departure-active'}`}>
                       {row.status}
                     </span>
                   </td>
-                  <td>
-                    {row.status === 'Pending' ? (
-                      <div style={{ display: 'flex', gap: '6px' }}>
-                        <button
-                          className="button-secondary"
-                          style={{ background: '#dcfce7', color: '#15803d' }}
-                          onClick={() => handleAction(row.id, 'Approved')}
-                        >
-                          Approve
-                        </button>
-                        <button
-                          className="button-secondary"
-                          style={{ background: '#fee2e2', color: '#991b1b' }}
-                          onClick={() => handleAction(row.id, 'Rejected')}
-                        >
-                          Reject
-                        </button>
-                      </div>
-                    ) : (
-                      <small style={{ color: '#94a3b8' }}>Processed</small>
-                    )}
-                  </td>
+                  {!isEmployee && (
+                    <td>
+                      {row.status === 'Pending' ? (
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <button
+                            className="button-secondary"
+                            style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.3)' }}
+                            onClick={() => handleAction(row.id, 'Approved')}
+                          >
+                            Approve
+                          </button>
+                          <button
+                            className="button-secondary"
+                            style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.3)' }}
+                            onClick={() => handleAction(row.id, 'Rejected')}
+                          >
+                            Reject
+                          </button>
+                        </div>
+                      ) : (
+                        <small style={{ color: '#64748b' }}>Processed</small>
+                      )}
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -152,30 +168,24 @@ export default function Leaves() {
 
       {showModal && (
         <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 999,
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 999,
           display: 'grid', placeItems: 'center', padding: '20px'
         }}>
-          <div className="card" style={{ width: '100%', maxWidth: '480px', margin: 0 }}>
-            <h3>Submit Leave Application</h3>
+          <div className="card" style={{ width: '100%', maxWidth: '480px', margin: 0, background: '#101927', border: '1px solid #1e2c45' }}>
+            <h3 style={{ color: '#f8fafc', margin: '0 0 6px' }}>Submit Leave Application</h3>
             <p className="page-description">Creates a request synced to Unified Systems biometric roster.</p>
             <form onSubmit={handleCreate} className="form-grid" style={{ marginTop: '16px' }}>
-              <label>
-                Employee Full Name
-                <input
-                  required
-                  placeholder="e.g. John Doe"
-                  value={newLeave.empName}
-                  onChange={e => setNewLeave({ ...newLeave, empName: e.target.value })}
-                />
-              </label>
-              <label>
-                Employee Code
-                <input
-                  placeholder="e.g. US-106"
-                  value={newLeave.empCode}
-                  onChange={e => setNewLeave({ ...newLeave, empCode: e.target.value })}
-                />
-              </label>
+              {!isEmployee && (
+                <label>
+                  Employee Full Name
+                  <input
+                    required
+                    placeholder="e.g. John Doe"
+                    value={newLeave.empName}
+                    onChange={e => setNewLeave({ ...newLeave, empName: e.target.value })}
+                  />
+                </label>
+              )}
               <label>
                 Leave Category
                 <select

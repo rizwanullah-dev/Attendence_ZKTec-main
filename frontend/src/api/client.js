@@ -33,12 +33,27 @@ export function handleMockResponse(config) {
   const method = (config.method || 'get').toLowerCase();
 
   if (url.includes('/auth/login')) {
+    let reqUser = mockUser;
+    try {
+      const parsedBody = typeof config.data === 'string' ? JSON.parse(config.data) : config.data;
+      const email = parsedBody?.email?.toLowerCase() || '';
+      if (email.includes('hr')) {
+        reqUser = { id: 2, name: 'Claire Morgan (HR Director)', email: 'hr@unifiedsystems.com', role: 'hr' };
+      } else if (email.includes('it') || email.includes('tech')) {
+        reqUser = { id: 3, name: 'Alex Rivera (IT Lead)', email: 'it@unifiedsystems.com', role: 'it' };
+      } else if (email.includes('chen') || email.includes('employee') || email.includes('agent')) {
+        reqUser = { id: 4, name: 'Sarah Chen (Agent)', email: 'sarah.chen@unifiedsystems.com', role: 'employee', empCode: 'US-101' };
+      } else {
+        reqUser = { id: 1, name: 'Operations Admin', email: 'admin@unifiedsystems.com', role: 'admin' };
+      }
+    } catch (e) {}
+
     return {
       status: 200,
       statusText: 'OK',
       headers: {},
       config,
-      data: { token: 'unified-token-2026', user: mockUser },
+      data: { token: `unified-token-${reqUser.role}-${Date.now()}`, user: reqUser },
     };
   }
 

@@ -65,13 +65,10 @@ export default function EmployeePortal() {
               First hardware punch today: <strong style={{ color: '#34d399' }}>08:52:14 AM</strong> (Main Lobby 40i Terminal) · Status: <strong>Early Clock-In (8 mins ahead)</strong>
             </p>
           </div>
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <a href="#/leaves" className="button-label" style={{ textDecoration: 'none' }}>
-              + Apply For Leave
-            </a>
-            <a href="#/payroll" className="button-secondary" style={{ textDecoration: 'none' }}>
-              📄 View My Payslip
-            </a>
+          <div>
+            <span className="punctuality-pill punctuality-early" style={{ fontSize: '13px', padding: '6px 14px' }}>
+              🟢 Verified On Floor
+            </span>
           </div>
         </div>
       </div>

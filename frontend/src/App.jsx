@@ -238,9 +238,15 @@ function Layout({ children }) {
           />
           <div className="brand-text-fallback">
             <strong>Unified Systems</strong>
-            <small>HCM & Workforce Operations</small>
+            <small style={{ color: '#38bdf8', fontWeight: 600 }}>
+              {userRole === 'employee' || userRole === 'agent' ? 'Agent Self-Service (ESS)' :
+               userRole === 'hr' ? 'HR Operations & People' :
+               userRole === 'it' || userRole === 'tech' ? 'IT Infrastructure Console' :
+               'Floor Command Center'}
+            </small>
           </div>
         </div>
+
         <nav aria-label="Primary navigation">
           {links.map(([path, icon, label]) => (
             <NavLink key={path} to={path} end={path === '/'}>
